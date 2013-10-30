@@ -28,8 +28,7 @@ namespace Malenki;
 
 
 /**
- * @brief Exploite les fichiers *.properties à la 
- * sauce Java.
+ * Read, get, put and save data in Java's properties file.
  */
 class Properties
 {
@@ -42,7 +41,7 @@ class Properties
 
 
     /**
-     * @brief Le constructeur.
+     * TODO si le fichier n'existe pas, le créer !
      * @param $str_file Le nom du fichier à lire
      */
     public function __construct($str_file)
