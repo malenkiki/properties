@@ -170,7 +170,7 @@ class Properties
                         // Si la ligne contient quelquechose, et qu'au moins une clé est déjà
                         // stockée, alors on concataine cette ligne à la valeur de la clé
                         // précédente
-                        if(strlen($line) > 0 and count($this->arr_key_value) > 0)
+                        if(strlen($line) > 0 && count($this->arr_key_value) > 0)
                         {
                             $this->arr_key_value[$lastKey] .= $this->str_new_line.$line;
                         }
