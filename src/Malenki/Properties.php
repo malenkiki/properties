@@ -41,8 +41,9 @@ class Properties
 
 
     /**
-     * TODO si le fichier n'existe pas, le créer !
-     * @param $str_file Le nom du fichier à lire
+     * Constructor, and sets file’s name.
+     *
+     * @param string $str_file File’s name as a string
      */
     public function __construct($str_file)
     {
@@ -55,201 +56,212 @@ class Properties
 
 
     /**
-     * @brief Indique quel est le retour à la ligne utilisé
-     * @param $str @c String indiquant le retour 
-     * ("\r","\r\n" ou "\n")
+     * Set the break line style to use.
+     *
+     * @param string $str Break line string ("\r","\r\n" or "\n")
      * @see setNewLineAsDOS(), setNewLineAsUNIX() et 
      * setNewLineAsMAC()
+     * @return Properties
      */
     private function setNewLine($str)
     {
         $this->str_new_line = $str;
+
+        return $this;
     }
 
 
 
     /**
-     * @brief Indique qu'il faut utiliser et prendre en compte 
-     * les retours à la
-     * ligne de type DOS/Windows
+     * Set break line as Windwos style (\r\n)
+     *
+     * @return Properties
      */
     public function setNewLineAsDOS()
     {
         $this->setNewLine("\r\n");
+
+        return $this;
     }
 
 
 
     /**
-     * @brief Indique qu'il faut utiliser et prendre en compte 
-     * les retours à la
-     * ligne de type UNIX
+     * Use unix style break line.
+     *
+     * @return Properties
      */
     public function setNewLineAsUNIX()
     {
         $this->setNewLine("\n");
+
+        return $this;
     }
 
 
 
     /**
-     * @brief Indique qu'il faut utiliser et prendre en compte 
-     * les retours à la
-     * ligne de type MAC
+     * Set break line as Mac style.
+     *
+     * @return Properties
      */
     public function setNewLineAsMAC()
     {
         $this->setNewLine("\r");
+
+        return $this;
     }
 
 
 
     /**
-     * @brief Utilisation de valeurs ayant des retours à la 
-     * ligne en leur sein
+     * Use multiline properties.
+     *
+     * @return Properties
      */
     public function multiLine()
     {
         $this->is_multiline = true;
+
+        return $this;
     }
 
 
 
     /**
-     * @brief Utilisation de valeurs sans retour à la ligne
+     * Use properties as single line only.
      *
-     * Si un retour à la ligne se présente, le reste de la 
-     * valeur après le premier
-     * retour à la ligne est ignoré.
+     * If break line occurs, value part string after this break line will be 
+     * ignore
+     *
+     * @return Properties
      */
     public function singleLine()
     {
         $this->is_multiline = false;
+
+        return $this;
     }
 
 
 
     /**
-     * @brief Parcourt le fichier et stocke les valeurs trouvées
-     * @return Boolean
+     * Parse file and store value in memory.
+     *
+     * @return Properties
      */
     public function read()
     {
-        if(!is_null($this->str_file))
+        $content = file_get_contents($this->str_file);
+        $content = explode($this->str_new_line, $content);
+
+        // Parsing table which contains lines
+        foreach($content as $line)
         {
-            $content = file_get_contents($this->str_file);
-            $content = explode($this->str_new_line,$content);
-
-            // On parcourt le tableau qui contient les lignes...
-            foreach($content as $line)
+            // If equals sign found, then there are maybe two parts
+            if(strpos($line, $this->str_separator) !== false)
             {
-                // Si on trouve un signe "égal", alors on s'attend à trouver 2 parties
-                if(strpos($line,$this->str_separator) !== false)
+                list($key, $value) = explode($this->str_separator, $line);
+                $key   = trim($key);
+                $value = trim($value);
+
+                // Checkes if key is null. If null, this key is skip
+                if(strlen($key) > 0)
                 {
-                    list($key,$value) = explode($this->str_separator,$line);
-                    $key   = trim($key);
-                    $value = trim($value);
-
-                    // On vérifie que la clé est non nulle, si nulle, est ignorée
-                    if(strlen($key) > 0)
-                    {
-                        $this->arr_key_value[$key] = $value;
-                    }
-
-                    // On stocke la dernière clé pour le cas des retours à la ligne dans
-                    // les valeurs (cf. en-dessous)
-                    $lastKey = $key;
+                    $this->arr_key_value[$key] = $value;
                 }
-                else
-                {
-                    if($this->is_multiline)
-                    {
-                        // On est dans le cas où il n'y a pas de signe "égal"
-                        $line = trim($line);
 
-                        // Si la ligne contient quelquechose, et qu'au moins une clé est déjà
-                        // stockée, alors on concataine cette ligne à la valeur de la clé
-                        // précédente
-                        if(strlen($line) > 0 && count($this->arr_key_value) > 0)
-                        {
-                            $this->arr_key_value[$lastKey] .= $this->str_new_line.$line;
-                        }
+                // Store last key in case of break line into values.
+                $lastKey = $key;
+            }
+            else
+            {
+                if($this->is_multiline)
+                {
+                    // No equal sign found case
+                    $line = trim($line);
+
+                    // If line has something and there is at least one key 
+                    // stored, then this line is concatenate to the previous 
+                    // key
+                    if(strlen($line) > 0 && count($this->arr_key_value) > 0)
+                    {
+                        $this->arr_key_value[$lastKey] .= $this->str_new_line.$line;
                     }
                 }
             }
+        }
 
-            return true;
-        }
-        else
-        {
-            return false;
-        }
+        return $this;
     }
 
 
 
     /**
-     * @brief Écrit les valeurs dans le fichier.
+     * Write values into file
+     *
+     * @return Properties
      */
     public function save()
     {
-        if(!is_null($this->str_file))
+        $str = '';
+
+        foreach($this->arr_key_value as $k => $v)
         {
-            $str = '';
-
-            foreach($this->arr_key_value as $k => $v)
-            {
-                $str .= $k . $this->str_separator . $v . $this->str_new_line;
-            }
-
-            $result = file_put_contents($this->str_file, $str);
-
-            if($result === false)
-            {
-                return false;
-            }
-
-            return true;
-        } 
-        else 
-        {
-            return false;
+            $str .= $k . $this->str_separator . $v . $this->str_new_line;
         }
+
+        $result = file_put_contents($this->str_file, $str);
+
+        if($result === false)
+        {
+            throw \RuntimeException('Cannot write file!');
+        }
+
+        return $this;
+
     }
 
 
 
     /**
-     * @brief Retourne les valeurs trouvées
-     *
-     * Les valeurs trouvées sont retournées sous la forme d'un 
-     * tableau. S'il n'y a aucune valeur, retourne @c null
-     *
-     * @return mixed
+     * Test if there is at least one property defined.
+     * 
+     * @access public
+     * @return boolean
      */
-    public function getAllValues()
+    public function isVoid()
     {
-        if(count($this->arr_key_value) == 0)
-        {
-            return null;
-        }
+        return count($this->arr_key_value) == 0;
+    }
 
+
+    /**
+     * Return all found values.
+     *
+     * Found values are return as array.
+     *
+     * @return array
+     */
+    public function getAll()
+    {
         return $this->arr_key_value;
     }
 
 
 
     /**
-     * @brief Retourne une valeur donnée.
+     * Get one value by its name.
      *
-     * Si le tableau est vide ou que la clé n'existe pas, 
-     * retourne @c false.
+     * If not exists, throw an Exception.
+     *
+     * @return mixed
      */
-    public function getValue($key)
+    public function get($key)
     {
         if(!array_key_exists($key,$this->arr_key_value) || count($this->arr_key_value) == 0)
         {
-            return false;
+            throw new \Exception('This property does not exist!');
         }
 
         return $this->arr_key_value[$key];
@@ -258,15 +270,17 @@ class Properties
 
 
     /**
-     * @brief Fournit une valeur à une clé.
+     * Set value
      *
-     * @param $key Nom de la clé
-     * @param $value Valeur de la clé
+     * @param string $key
+     * @param mixed $value 
+     * @return Property
      */
-    public function setValue($key, $value)
+    public function set($key, $value)
     {
         $this->arr_key_value[$key] = $value;
-        return true;
+
+        return $this;
     }
 
 }
